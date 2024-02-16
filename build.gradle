@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id "org.sonarqube" version "4.4.1.3373"
+    id 'info.solidsoft.pitest' version '1.15.0'
+    id 'org.springframework.boot' version '3.2.2'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.pedrohubner'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+}
+
+dependencies {
+    implementation project(':commons')
+    testImplementation project(':commons')
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
+    testImplementation 'org.testcontainers:mongodb:1.16.0'
+    testImplementation 'org.testcontainers:testcontainers:1.17.2'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'jacoco'
+    apply plugin: 'info.solidsoft.pitest'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'info.solidsoft.pitest.aggregator'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compileOnly 'org.projectlombok:lombok:1.18.20'
+        annotationProcessor 'org.projectlombok:lombok:1.18.20'
+        implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation 'io.projectreactor:reactor-test'
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    }
+
+    test {
+        useJUnitPlatform()
+        finalizedBy('jacocoTestReport')
+        finalizedBy('pitest')
+    }
+
+    pitest {
+        pitestVersion = '1.15.2'
+        junit5PluginVersion = '1.2.1'
+        targetClasses.add('com.pedrohubner.*')
+        targetTests.add('com.pedrohubner.*')
+        timestampedReports.set(false)
+        excludedClasses.add('*.config.*')
+        outputFormats.addAll('XML', 'HTML')
+    }
+
+    jacocoTestReport {
+        reports {
+            csv.required = false
+
+            html.required = true
+            html.outputLocation = file(layout.buildDirectory.dir('reports/jacoco/html').get())
+
+            xml.required = true
+            xml.outputLocation = file(layout.buildDirectory.dir('reports/jacoco/report.xml').get())
+        }
+
+        dependsOn(test)
+    }
+}
