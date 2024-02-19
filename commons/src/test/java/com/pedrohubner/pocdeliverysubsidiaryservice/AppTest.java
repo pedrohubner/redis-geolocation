@@ -22,7 +22,6 @@ public class AppTest {
     public void testMain() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outContent));
-        git remote add origin https://github.com/pedrohubner/pic-delivery-subsidiary-service.git
         App.main(new String[]{});
 
         String expectedOutput = "Hello World!3" + System.lineSeparator();

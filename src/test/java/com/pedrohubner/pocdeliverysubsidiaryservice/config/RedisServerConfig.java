@@ -12,7 +12,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public class RedisServerConfig {
 
     private static final String REDIS_DOCKER_IMAGE = "redis:5.0.3-alpine";
-//    private static final String REDIS_DOCKER_IMAGE = "redis:latest";
 
     @Container
     static GenericContainer genericContainer = new GenericContainer(REDIS_DOCKER_IMAGE).withExposedPorts(6379);
