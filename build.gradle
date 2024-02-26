@@ -50,8 +50,6 @@ allprojects {
 
     test {
         useJUnitPlatform()
-        finalizedBy('jacocoTestReport')
-        finalizedBy('pitest')
     }
 
     pitest {

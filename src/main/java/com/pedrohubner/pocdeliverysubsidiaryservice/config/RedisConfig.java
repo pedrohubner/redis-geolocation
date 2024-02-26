@@ -36,4 +36,14 @@ public class RedisConfig {
                 .build());
     }
 
+    @Bean
+    public ReactiveRedisTemplate<String, String> deliveryIdRedisTemplate(ReactiveRedisConnectionFactory factory) {
+        final var keySerializer = new StringRedisSerializer();
+        final var valueSerializer = new StringRedisSerializer();
+
+        return new ReactiveRedisTemplate<>(factory, RedisSerializationContext.<String, String>newSerializationContext(keySerializer)
+                .value(valueSerializer)
+                .build());
+    }
+
 }

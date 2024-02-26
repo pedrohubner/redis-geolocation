@@ -16,11 +16,10 @@ import java.util.List;
 public class DeliveryService {
 
     private static final String CACHE_KEY = "delivery-subsidiary-service:delivery-models";
-    private static final int FIRST_POSITION = 0;
-    private static final int LAST_POSITION = -1;
 
     private final DeliveryRepository repository;
     private final ReactiveRedisTemplate<String, DeliveryModelResponse> reactiveRedisTemplate;
+    private final ReactiveRedisTemplate<String, String> deliveryIdRedisTemplate;
 
     public Mono<DeliveryModelResponse> createDelivery(DeliveryModelRequest request) {
         final var entity = getEntity(request);
@@ -36,8 +35,14 @@ public class DeliveryService {
     }
 
     private Flux<DeliveryModelResponse> getCachedDeliveries() {
-        return reactiveRedisTemplate.opsForList().range(CACHE_KEY, FIRST_POSITION, LAST_POSITION)
+        return deliveryIdRedisTemplate.opsForSet().members(CACHE_KEY)
+                .flatMap(this::getDeliveryModelFromCache)
                 .map(value -> value);
+    }
+
+    private Mono<DeliveryModelResponse> getDeliveryModelFromCache(String deliveryId) {
+        final var formattedKey = getFormattedKey(deliveryId);
+        return reactiveRedisTemplate.opsForValue().get(formattedKey);
     }
 
     private Mono<List<DeliveryModelResponse>> getDeliveriesAndSetToCache(List<String> status) {
@@ -50,7 +55,9 @@ public class DeliveryService {
     }
 
     private void saveDeliveryModelsInCache(List<DeliveryModelResponse> deliveries) {
-        reactiveRedisTemplate.opsForList().rightPushAll(CACHE_KEY, deliveries).subscribe();
+        for (DeliveryModelResponse delivery : deliveries) {
+            insertChangeOnCache(delivery);
+        }
     }
 
     public Mono<DeliveryModelResponse> updateDelivery(String deliveryId, DeliveryModelRequest request) {
@@ -72,9 +79,13 @@ public class DeliveryService {
     }
 
     private void insertChangeOnCache(DeliveryModelResponse delivery) {
-        final var formattedKey = String.format(CACHE_KEY.concat(":%s"), delivery.id());
+        final var formattedKey = getFormattedKey(delivery.id());
         reactiveRedisTemplate.opsForValue().set(formattedKey, delivery).subscribe();
-        reactiveRedisTemplate.opsForList().delete(CACHE_KEY).subscribe();
+        deliveryIdRedisTemplate.opsForSet().add(CACHE_KEY, delivery.id()).subscribe();
+    }
+
+    private String getFormattedKey(String deliveryId) {
+        return String.format(CACHE_KEY.concat(":%s"), deliveryId);
     }
 
     private static DeliveryModelResponse getEntity(DeliveryModelRequest request) {

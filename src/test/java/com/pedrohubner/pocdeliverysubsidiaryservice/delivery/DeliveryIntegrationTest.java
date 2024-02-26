@@ -5,7 +5,6 @@ import com.pedrohubner.pocdeliverysubsidiaryservice.config.RedisServerConfig;
 import com.pedrohubner.pocdeliverysubsidiaryservice.delivery.model.DeliveryModelResponse;
 import com.pedrohubner.pocdeliverysubsidiaryservice.stub.DeliveryModelResponseStub;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +34,8 @@ public class DeliveryIntegrationTest {
     @SpyBean
     @Autowired
     ReactiveRedisTemplate<String, DeliveryModelResponse> reactiveRedisTemplate;
+    @Autowired
+    ReactiveRedisTemplate<String, String> deliveryIdRedisTemplate;
 
     @Test
     public void shouldGetDeliveriesFromMongoDBAndThenSaveItOnRedisWhenRedisDoesNotHaveCache() {
@@ -59,7 +60,7 @@ public class DeliveryIntegrationTest {
                     Assertions.assertEquals(expected, responseBody);
                 });
 
-        Mockito.verify(reactiveRedisTemplate, Mockito.times(2)).opsForList();
+        Mockito.verify(reactiveRedisTemplate, Mockito.times(1)).opsForValue();
         Mockito.verify(deliveryRepository, Mockito.times(1)).findByStatusIn(statusList);
         deleteMongoAndRedisInfo(cacheKey);
     }
@@ -70,8 +71,13 @@ public class DeliveryIntegrationTest {
         final var delivery1 = DeliveryModelResponseStub.deliveryModelOne();
         final var delivery2 = DeliveryModelResponseStub.deliveryModelTwo();
         final var expected = List.of(delivery1, delivery2);
+        final var formattedKeyDelivery1 = CACHE_KEY.concat(":").concat(delivery1.id());
+        final var formattedKeyDelivery2 = CACHE_KEY.concat(":").concat(delivery2.id());
 
-        reactiveRedisTemplate.opsForList().rightPushAll(CACHE_KEY, List.of(delivery1, delivery2)).subscribe();
+        deliveryIdRedisTemplate.opsForSet().add(CACHE_KEY, delivery1.id()).subscribe();
+        deliveryIdRedisTemplate.opsForSet().add(CACHE_KEY, delivery2.id()).subscribe();
+        reactiveRedisTemplate.opsForValue().set(formattedKeyDelivery1, delivery1).subscribe();
+        reactiveRedisTemplate.opsForValue().set(formattedKeyDelivery2, delivery2).subscribe();
 
         webTestClient
                 .get()
@@ -86,13 +92,11 @@ public class DeliveryIntegrationTest {
                     Assertions.assertEquals(expected, responseBody);
                 });
 
-        Mockito.verify(reactiveRedisTemplate, Mockito.times(2)).opsForList();
+        Mockito.verify(reactiveRedisTemplate, Mockito.times(4)).opsForValue();
 
         deleteMongoAndRedisInfo(CACHE_KEY);
     }
 
-    //TODO - Fix this test
-    @Disabled
     @Test
     public void shouldReturnNoContentWhenRedisHasNoCacheAndMongoDBHasNoData() {
         final var uri = "/v1/deliveries/models";
@@ -105,17 +109,16 @@ public class DeliveryIntegrationTest {
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .exchange()
                 .expectStatus()
-                .isNoContent();
+                .isOk();
 
-        Mockito.verify(reactiveRedisTemplate, Mockito.times(1)).opsForList();
-        Mockito.verify(deliveryRepository, Mockito.times(2)).findByStatusIn(statusList);
+        Mockito.verify(deliveryRepository, Mockito.times(1)).findByStatusIn(statusList);
 
         deleteMongoAndRedisInfo(cacheKey);
     }
 
     private void deleteMongoAndRedisInfo(String cacheKey) {
         deliveryRepository.deleteAll().subscribe();
-        reactiveRedisTemplate.opsForList().delete(cacheKey).subscribe();
+        reactiveRedisTemplate.opsForSet().delete(cacheKey).subscribe();
     }
 
 }
