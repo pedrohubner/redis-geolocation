@@ -27,6 +27,23 @@ public class RedisConfig {
     }
 
     @Bean
+    public ReactiveRedisTemplate<String, Object> template(final ReactiveRedisConnectionFactory factory) {
+        final var jackson2JsonRedisSerializer = new CustomRedisSerializer(new Jackson2JsonRedisSerializer<>(Object.class), new StringRedisSerializer());
+
+
+        final var context = RedisSerializationContext
+                .<String, Object>newSerializationContext(new StringRedisSerializer())
+                .key(new StringRedisSerializer())
+                .value(jackson2JsonRedisSerializer)
+                .hashKey(new StringRedisSerializer())
+                .hashValue(jackson2JsonRedisSerializer)
+                .build();
+
+
+        return new ReactiveRedisTemplate<>(factory, context);
+    }
+
+    @Bean
     public ReactiveRedisTemplate<String, DeliveryModelResponse> reactiveRedisTemplate(ReactiveRedisConnectionFactory factory) {
         final var keySerializer = new StringRedisSerializer();
         final var valueSerializer = new Jackson2JsonRedisSerializer<>(DeliveryModelResponse.class);
