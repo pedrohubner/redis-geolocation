@@ -15,8 +15,6 @@ java {
 }
 
 dependencies {
-    implementation project(':commons')
-    testImplementation project(':commons')
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
 
