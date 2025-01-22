@@ -20,6 +20,7 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
+    private int anotherPort;
     @Bean
     @Primary
     public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
