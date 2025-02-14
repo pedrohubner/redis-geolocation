@@ -1,0 +1,26 @@
+services:
+  web:
+    container_name: redis-geolocation
+    build: .
+    image: 'redis-geolocation'
+    restart: on-failure
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "9000:9000"
+
+##nem meu compose e nem meu Dockerfile estão pegando as últimas atualizações
+  mongo:
+    image: 'mongo'
+    restart: on-failure
+    container_name: 'mongo-rg'
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: 'redis'
+    restart: on-failure
+    container_name: 'redis-rg'
+    ports:
+      - "6379:6379"

@@ -1,6 +1,7 @@
 package com.pedrohubner.redisgeolocation.config;
 
-import com.pedrohubner.redisgeolocation.delivery.model.DeliveryModelResponse;
+import com.pedrohubner.redisgeolocation.deliveryarea.model.response.DeliveryAreaResponse;
+import com.pedrohubner.redisgeolocation.subsidiary.model.response.SubsidiaryResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +15,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
-
     @Value("${spring.data.redis.host}")
     private String host;
     @Value("${spring.data.redis.port}")
@@ -28,8 +28,9 @@ public class RedisConfig {
 
     @Bean
     public ReactiveRedisTemplate<String, Object> template(final ReactiveRedisConnectionFactory factory) {
-        final var jackson2JsonRedisSerializer = new CustomRedisSerializer(new Jackson2JsonRedisSerializer<>(Object.class), new StringRedisSerializer());
-
+        final var jackson2JsonRedisSerializer = new CustomRedisSerializer(
+                new Jackson2JsonRedisSerializer<>(Object.class), new StringRedisSerializer()
+        );
 
         final var context = RedisSerializationContext
                 .<String, Object>newSerializationContext(new StringRedisSerializer())
@@ -44,23 +45,44 @@ public class RedisConfig {
     }
 
     @Bean
-    public ReactiveRedisTemplate<String, DeliveryModelResponse> reactiveRedisTemplate(ReactiveRedisConnectionFactory factory) {
+    public ReactiveRedisTemplate<String, DeliveryAreaResponse> deliveryAreaTemplate(
+            ReactiveRedisConnectionFactory factory
+    ) {
         final var keySerializer = new StringRedisSerializer();
-        final var valueSerializer = new Jackson2JsonRedisSerializer<>(DeliveryModelResponse.class);
+        final var valueSerializer = new Jackson2JsonRedisSerializer<>(DeliveryAreaResponse.class);
 
-        return new ReactiveRedisTemplate<>(factory, RedisSerializationContext.<String, DeliveryModelResponse>newSerializationContext(keySerializer)
+        return new ReactiveRedisTemplate<>(factory, RedisSerializationContext.<String, DeliveryAreaResponse>newSerializationContext(keySerializer)
                 .value(valueSerializer)
                 .build());
     }
 
     @Bean
-    public ReactiveRedisTemplate<String, String> deliveryIdRedisTemplate(ReactiveRedisConnectionFactory factory) {
+    public ReactiveRedisTemplate<String, Long> geolocationTemplate(
+            ReactiveRedisConnectionFactory factory
+    ) {
         final var keySerializer = new StringRedisSerializer();
-        final var valueSerializer = new StringRedisSerializer();
+        final var valueSerializer = new Jackson2JsonRedisSerializer<>(Long.class);
 
-        return new ReactiveRedisTemplate<>(factory, RedisSerializationContext.<String, String>newSerializationContext(keySerializer)
-                .value(valueSerializer)
-                .build());
+        return new ReactiveRedisTemplate<>(
+                factory,
+                RedisSerializationContext.<String, Long>newSerializationContext(keySerializer)
+                        .value(valueSerializer)
+                        .build()
+        );
     }
 
+    @Bean
+    public ReactiveRedisTemplate<String, SubsidiaryResponse> subsidiaryTemplate(
+            ReactiveRedisConnectionFactory factory
+    ) {
+        final var keySerializer = new StringRedisSerializer();
+        final var valueSerializer = new Jackson2JsonRedisSerializer<>(SubsidiaryResponse.class);
+
+        return new ReactiveRedisTemplate<>(
+                factory,
+                RedisSerializationContext.<String, SubsidiaryResponse>newSerializationContext(keySerializer)
+                        .value(valueSerializer)
+                        .build()
+        );
+    }
 }
